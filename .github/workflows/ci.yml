@@ -54,7 +54,7 @@ jobs:
         entrypoint: /usr/sbin/mosquitto
         command: -c /mosquitto-no-auth.conf
         options: >-
-          --health-cmd "mosquitto_sub -h 127.0.0.1 -t '$$SYS/broker/version' -C 1 -W 3"
+          --health-cmd "mosquitto_pub -h 127.0.0.1 -t healthcheck -m ok"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 20

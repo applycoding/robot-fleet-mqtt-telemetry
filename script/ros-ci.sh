@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Build and test the Humble bridge inside ros:humble-ros-base.
-set -euo pipefail
+set -eo pipefail
 
 cd "$(dirname "$0")/.."
 
