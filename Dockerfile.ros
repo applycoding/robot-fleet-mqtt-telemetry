@@ -1,0 +1,20 @@
+FROM ros:humble-ros-base
+
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        python3-colcon-common-extensions \
+        python3-paho-mqtt \
+        ros-humble-geometry-msgs \
+        ros-humble-sensor-msgs \
+        ros-humble-diagnostic-msgs \
+        ros-humble-launch-ros \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /ws
+COPY ros2_bridge /ws/src/ros2_bridge
+RUN . /opt/ros/humble/setup.sh && colcon build --packages-select ros2_bridge
+
+COPY ros2_bridge/docker-entry.sh /docker-entry.sh
+RUN chmod +x /docker-entry.sh
+ENTRYPOINT ["/docker-entry.sh"]
