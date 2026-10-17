@@ -1,0 +1,54 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fleet-telemetry"
+version = "0.1.0"
+description = "Ingest robot fleet telemetry from MQTT into TimescaleDB and raise threshold alerts."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { file = "LICENSE" }
+authors = [{ name = "Arpan Bom" }]
+dependencies = [
+  "fastapi>=0.115",
+  "paho-mqtt>=2.1,<3",
+  "psycopg[binary]>=3.2",
+  "uvicorn>=0.32",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.3",
+  "ruff>=0.9",
+]
+
+[project.scripts]
+fleet-ingest = "fleet_telemetry.ingest:main"
+fleet-simulate = "fleet_telemetry.simulate:main"
+fleet-api = "fleet_telemetry.api:main"
+fleet-webhook = "fleet_telemetry.webhook_sink:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+fleet_telemetry = ["schema.sql"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+  "integration: requires Mosquitto and TimescaleDB service containers",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+src = ["src", "tests", "ros2_bridge"]
+extend-exclude = ["install", "log", "build"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.ruff.lint.isort]
+known-third-party = ["launch", "launch_ros"]

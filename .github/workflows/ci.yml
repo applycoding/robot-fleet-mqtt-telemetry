@@ -1,0 +1,83 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  unit:
+    name: unit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: python -m pip install --upgrade pip && pip install -e ".[dev]"
+      - name: Lint
+        run: ruff check .
+      - name: Unit tests
+        run: pytest -q -m "not integration"
+
+  integration:
+    name: integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      timescaledb:
+        image: timescale/timescaledb:2.30.2-pg16
+        env:
+          POSTGRES_USER: fleet
+          POSTGRES_PASSWORD: fleet
+          POSTGRES_DB: fleet
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U fleet -d fleet"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 30
+          --health-start-period 10s
+      mosquitto:
+        image: eclipse-mosquitto:2.0.22
+        ports:
+          - 1883:1883
+        # The image's default listener is loopback-only. This config listens on
+        # every interface and allows anonymous clients, which is what the job needs.
+        entrypoint: /usr/sbin/mosquitto
+        command: -c /mosquitto-no-auth.conf
+        options: >-
+          --health-cmd "mosquitto_pub -h 127.0.0.1 -t healthcheck -m ok"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: python -m pip install --upgrade pip && pip install -e ".[dev]"
+      - name: Integration tests
+        env:
+          MQTT_HOST: 127.0.0.1
+          MQTT_PORT: "1883"
+          DATABASE_URL: postgresql://fleet:fleet@127.0.0.1:5432/fleet
+        run: pytest -q -m integration
+
+  ros2:
+    name: ros2 humble (optional)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and test the bridge in ros:humble-ros-base
+        run: docker run --rm -v "${{ github.workspace }}:/ws" -w /ws ros:humble-ros-base bash /ws/script/ros-ci.sh
